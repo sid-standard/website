@@ -690,4 +690,4 @@ await window.SID.auth.authenticate('token')
 
 ## Reference
 
-Full specification: https://sid-standard.org
+Full specification: https://sid-standard.github.io

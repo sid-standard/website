@@ -75,12 +75,11 @@ export default function JavaScriptAPIPage() {
   getElements(): SIDElement[],
   getElement(id: string): SIDElement | null,
   
-  // Execution
-  interact(id: string, action: InteractionAction): Promise<InteractionResult>,
+  // Execution (waits for completion)
+  interact(id: string, action: InteractionAction, options?: { timeout?: number }): Promise<InteractionResult>,
   
-  // Operation tracking
-  getOperation(id: string): Operation | null,
-  pollOperation(id: string, timeoutMs?: number, intervalMs?: number): Promise<Operation>,
+  // Completion signaling (called by app code)
+  complete(elementId: string, result: CompletionResult): void,
   
   // Auth (optional)
   auth?: {
@@ -228,32 +227,29 @@ if (saveBtn) {
           <div className="space-y-6">
             <div className="border rounded-lg p-4">
               <h4 className="font-mono font-semibold mb-2">
-                interact(id: string, action: InteractionAction):
+                interact(id: string, action: InteractionAction, options?: &#123; timeout?: number &#125;):
                 Promise&lt;InteractionResult&gt;
               </h4>
               <p className="text-muted-foreground text-sm mb-4">
-                Triggers an interaction on the specified element. Returns a
-                result indicating success/failure and optionally an operation
-                handle for tracking async operations.
+                Triggers an interaction on the specified element and waits for
+                completion. Returns a result indicating success/failure, final
+                status, and any side effects.
               </p>
               <CodeBlock
                 language="javascript"
-                code={`// Click a button
-const result = await window.SID.interact('btn-save', { type: 'click' });
+                code={`// Click a button and wait for completion
+const result = await window.SID.interact('btn-save', { type: 'click' }, { timeout: 15000 });
 
-if (result.success) {
-  console.log('Interaction triggered:', result.message);
-  
-  if (result.operation) {
-    // Track the async operation
-    const op = await window.SID.pollOperation(result.operation.id, 10000);
-    console.log('Operation completed:', op.status);
+if (result.status === 'completed') {
+  console.log('Success:', result.message);
+  if (result.effects?.elementsAdded) {
+    console.log('New elements:', result.effects.elementsAdded);
   }
 } else {
-  console.error('Interaction failed:', result.error);
+  console.error('Interaction failed or timed out:', result.error || result.status);
 }
 
-// Fill an input field
+// Fill an input field (typically instant)
 await window.SID.interact('input-email', { 
   type: 'fill', 
   value: 'user@example.com' 
@@ -272,68 +268,32 @@ await window.SID.interact('checkbox-terms', {
 });`}
               />
             </div>
-          </div>
-
-          {/* Operation Tracking Methods */}
-          <h3 className="text-xl font-medium mt-8 mb-4">
-            Operation Tracking Methods
-          </h3>
-
-          <div className="space-y-6">
-            <div className="border rounded-lg p-4">
-              <h4 className="font-mono font-semibold mb-2">
-                getOperation(id: string): Operation | null
-              </h4>
-              <p className="text-muted-foreground text-sm mb-4">
-                Returns the current status of an operation by ID. Use this for
-                manual polling or checking operation status.
-              </p>
-              <CodeBlock
-                language="javascript"
-                code={`const operation = window.SID.getOperation('op-123');
-
-if (operation) {
-  console.log('Status:', operation.status);  // 'pending' | 'success' | 'error'
-  console.log('Message:', operation.message);
-  
-  if (operation.status !== 'pending') {
-    console.log('Completed at:', operation.completedAt);
-    console.log('Effects:', operation.effects);
-  }
-}`}
-              />
-            </div>
 
             <div className="border rounded-lg p-4">
               <h4 className="font-mono font-semibold mb-2">
-                pollOperation(id: string, timeoutMs?: number, intervalMs?:
-                number): Promise&lt;Operation&gt;
+                complete(elementId: string, result: CompletionResult): void
               </h4>
               <p className="text-muted-foreground text-sm mb-4">
-                Polls an operation until it completes or times out. Default
-                timeout is 30 seconds, default interval is 500ms.
+                Called by the application code to signal that an async operation
+                triggered by an interaction has completed. This resolves the
+                pending <code className="bg-muted px-1 rounded">interact()</code> Promise.
               </p>
               <CodeBlock
                 language="javascript"
-                code={`// Wait for operation to complete (default timeout: 30s)
-const operation = await window.SID.pollOperation('op-123');
-
-// Custom timeout and interval
-const operation2 = await window.SID.pollOperation(
-  'op-456',
-  15000,  // 15 second timeout
-  250     // Poll every 250ms
-);
-
-if (operation.status === 'success') {
-  console.log('Operation succeeded:', operation.message);
-  
-  // Check what changed
-  if (operation.effects?.elementsAdded) {
-    console.log('New elements:', operation.effects.elementsAdded);
+                code={`// In application event handler
+async function handleSave() {
+  try {
+    await api.saveData();
+    window.SID.complete('btn-save', {
+      status: 'completed',
+      message: 'Data saved successfully'
+    });
+  } catch (err) {
+    window.SID.complete('btn-save', {
+      status: 'error',
+      message: err.message
+    });
   }
-} else if (operation.status === 'error') {
-  console.error('Operation failed:', operation.message);
 }`}
               />
             </div>
@@ -456,23 +416,23 @@ if (success) {
 
             <TypeDefinition
               name="InteractionResult"
-              description="The result of calling interact(). Indicates whether the interaction was triggered and provides an optional operation handle for tracking."
+              description="The result of calling interact(). Indicates whether the interaction was triggered and provides the final status and effects."
               code={`interface InteractionResult {
   success: boolean;              // Whether the interaction was triggered
+  status: "completed" | "error" | "timeout" | "navigation" | "external";
   error?: string;                // Error if interaction couldn't be triggered
   message?: string;              // Plaintext description of what happened
-  operation?: OperationHandle;   // Handle to track the resulting operation
+  effects?: OperationEffects;    // What changed (for 'completed' status)
 }`}
             />
 
             <TypeDefinition
-              name="OperationHandle"
-              description="Returned when an interaction triggers a trackable operation. Contains the operation ID and tracking information."
-              code={`interface OperationHandle {
-  id: string;
-  
-  // How the agent should determine completion
-  tracking: OperationTracking;
+              name="CompletionResult"
+              description="The result passed to complete() by the application code to signal operation completion."
+              code={`interface CompletionResult {
+  status: "completed" | "error";
+  message?: string;
+  effects?: OperationEffects;
 }`}
             />
 
@@ -543,14 +503,8 @@ console.log(saveBtn.descriptionLong);
 //  errors if any fields are invalid. On success, shows a toast and 
 //  updates the 'Last saved' timestamp. On network error, shows retry option."
 
-// 2. Check if action is tracked
-const clickAction = saveBtn.actions.find(a => a.type === 'click');
-if (clickAction.tracked) {
-  // This action produces an operation we can track
-}
-
-// 3. Trigger interaction
-const result = await window.SID.interact('btn-save', { type: 'click' });
+// 2. Trigger interaction and wait for completion
+const result = await window.SID.interact('btn-save', { type: 'click' }, { timeout: 15000 });
 
 if (!result.success) {
   // Interaction couldn't be triggered (element disabled, not found, etc.)
@@ -558,34 +512,32 @@ if (!result.success) {
   return;
 }
 
-// 4. Handle based on tracking type
-switch (result.operation?.tracking.type) {
-  case 'async':
-    // Wait for async operation to complete
-    const op = await window.SID.pollOperation(result.operation.id, 15000);
-    if (op.status === 'success') {
-      console.log('Saved:', op.message);
-      // Check what changed
-      if (op.effects?.elementsAdded) {
-        console.log('New elements:', op.effects.elementsAdded);
-      }
-    } else {
-      console.error('Save failed:', op.message);
+// 3. Handle based on final status
+switch (result.status) {
+  case 'completed':
+    console.log('Saved:', result.message);
+    // Check what changed
+    if (result.effects?.elementsAdded) {
+      console.log('New elements:', result.effects.elementsAdded);
     }
     break;
     
+  case 'error':
+    console.error('Save failed:', result.message);
+    break;
+    
+  case 'timeout':
+    console.log('Operation timed out - may still complete in background');
+    break;
+    
   case 'navigation':
-    // Page will navigate; success = new page loads
+    // Page will navigate; wait for page load
     // Agent should wait for page load, then re-query SID on new page
     break;
     
   case 'external':
-    // Leaving SID context; read description for guidance
-    console.log(result.operation.tracking.description);
-    break;
-    
-  case 'none':
-    // Instant action, already complete
+    // Leaving SID context; read message for guidance
+    console.log(result.message);
     break;
 }`}
           />
@@ -635,22 +587,18 @@ await window.SID.interact('checkbox-terms', {
   value: true 
 });
 
-// Submit the form
-const result = await window.SID.interact('btn-submit', { type: 'click' });
+// Submit the form and wait for completion
+const result = await window.SID.interact('btn-submit', { type: 'click' }, { timeout: 10000 });
 
-if (result.success && result.operation) {
-  const op = await window.SID.pollOperation(result.operation.id);
+if (result.status === 'completed') {
+  console.log('Form submitted successfully');
   
-  if (op.status === 'success') {
-    console.log('Form submitted successfully');
-    
-    // Check if we navigated somewhere
-    if (op.effects?.navigatedTo) {
-      console.log('Redirected to:', op.effects.navigatedTo);
-    }
-  } else {
-    console.error('Form submission failed:', op.message);
+  // Check if we navigated somewhere
+  if (result.effects?.navigatedTo) {
+    console.log('Redirected to:', result.effects.navigatedTo);
   }
+} else {
+  console.error('Form submission failed:', result.message || result.status);
 }`}
           />
         </section>

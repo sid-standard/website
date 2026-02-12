@@ -270,12 +270,11 @@ export default function CoreConceptsPage() {
   getElements(): SIDElement[],        // Returns elements with short descriptions only
   getElement(id: string): SIDElement | null,  // Returns element with long description
   
-  // Execution
+  // Execution (waits for completion)
   interact(id: string, action: InteractionAction): Promise<InteractionResult>,
   
-  // Operation tracking
-  getOperation(id: string): Operation | null,
-  pollOperation(id: string, timeoutMs?: number, intervalMs?: number): Promise<Operation>,
+  // Completion signaling (called by app code)
+  complete(elementId: string, result: CompletionResult): void,
   
   // Auth (optional)
   auth?: {
@@ -314,19 +313,9 @@ export default function CoreConceptsPage() {
               <h4 className="font-semibold mb-2">Execution Methods</h4>
               <p className="text-muted-foreground text-sm">
                 <code className="bg-muted px-1 rounded">interact()</code>{" "}
-                triggers an interaction on an element and returns a result with
-                optional operation handle for tracking async operations.
-              </p>
-            </div>
-
-            <div className="border rounded-lg p-4">
-              <h4 className="font-semibold mb-2">Operation Tracking</h4>
-              <p className="text-muted-foreground text-sm">
-                <code className="bg-muted px-1 rounded">getOperation()</code>{" "}
-                and{" "}
-                <code className="bg-muted px-1 rounded">pollOperation()</code>{" "}
-                allow agents to track the status of async operations like form
-                submissions or API calls.
+                triggers an interaction on an element and waits for completion.
+                Applications signal completion using{" "}
+                <code className="bg-muted px-1 rounded">complete()</code>.
               </p>
             </div>
           </div>
