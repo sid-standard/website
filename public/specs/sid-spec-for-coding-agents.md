@@ -557,4 +557,4 @@ Fields marked with `"x-sid-sensitive": true` should be masked in UI and not logg
 
 ## Reference
 
-Full specification: https://sid-standard.org
+Full specification: https://sid-standard.github.io

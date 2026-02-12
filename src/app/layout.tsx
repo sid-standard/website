@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   },
   description:
     "Official documentation for the SID (Semantic Interaction Description) standard - an accessibility standard for AI agents, enabling effective interactions with web applications.",
-  metadataBase: new URL("https://sid-standard.org"),
+  metadataBase: new URL("https://sid-standard.github.io"),
   keywords: [
     "SID",
     "Semantic Interaction Description",
@@ -35,8 +35,16 @@ export const metadata: Metadata = {
     title: "SID - Semantic Interaction Description",
     description:
       "Official documentation for the SID standard - an accessibility standard for AI agents.",
-    url: "https://sid-standard.org",
+    url: "https://sid-standard.github.io",
     siteName: "SID Standard",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "SID - Semantic Interaction Description",
+      },
+    ],
     type: "website",
     locale: "en_US",
   },
@@ -45,13 +53,14 @@ export const metadata: Metadata = {
     title: "SID - Semantic Interaction Description",
     description:
       "A standard that enables AI agents to understand and interact with web applications reliably and efficiently.",
+    images: ["/og.png"],
   },
   robots: {
     index: true,
     follow: true,
   },
   alternates: {
-    canonical: "https://sid-standard.org",
+    canonical: "https://sid-standard.github.io",
   },
 };
 
