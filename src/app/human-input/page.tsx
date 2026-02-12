@@ -17,7 +17,22 @@ export const metadata: Metadata = {
     title: "Human Input Requirements | SID",
     description:
       "How to declare when sensitive data collection is needed using SID's human input requirements.",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "Human Input Requirements | SID",
+      },
+    ],
     type: "article",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Human Input Requirements | SID",
+    description:
+      "How to declare when sensitive data collection is needed using SID's human input requirements.",
+    images: ["/og.png"],
   },
 };
 

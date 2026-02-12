@@ -15,7 +15,21 @@ export const metadata: Metadata = {
     title: "SDKs | SID",
     description:
       "Official SDKs for implementing SID in your applications.",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "SDKs | SID",
+      },
+    ],
     type: "article",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SDKs | SID",
+    description: "Official SDKs for implementing SID in your applications.",
+    images: ["/og.png"],
   },
 };
 

@@ -16,7 +16,22 @@ export const metadata: Metadata = {
     title: "Authentication | SID",
     description:
       "Token-based authentication for AI agents using SID's optional auth API.",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "Authentication | SID",
+      },
+    ],
     type: "article",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Authentication | SID",
+    description:
+      "Token-based authentication for AI agents using SID's optional auth API.",
+    images: ["/og.png"],
   },
 };
 

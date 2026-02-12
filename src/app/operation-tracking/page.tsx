@@ -14,7 +14,22 @@ export const metadata: Metadata = {
     title: "Operation Tracking | SID",
     description:
       "How to signal interaction completion to agents using SID's simplified operation tracking system.",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "Operation Tracking | SID",
+      },
+    ],
     type: "article",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Operation Tracking | SID",
+    description:
+      "How to signal interaction completion to agents using SID's simplified operation tracking system.",
+    images: ["/og.png"],
   },
 };
 

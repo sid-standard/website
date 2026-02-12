@@ -13,7 +13,22 @@ export const metadata: Metadata = {
     title: "Introduction | SID",
     description:
       "SID (Semantic Interaction Description) is an accessibility standard for AI agents, enabing AI agents to navigate and interact with web applications effectively.",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "Introduction | SID",
+      },
+    ],
     type: "article",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Introduction | SID",
+    description:
+      "SID (Semantic Interaction Description) is an accessibility standard for AI agents, enabing AI agents to navigate and interact with web applications effectively.",
+    images: ["/og.png"],
   },
 };
 

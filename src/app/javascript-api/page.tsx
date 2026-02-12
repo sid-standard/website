@@ -16,7 +16,22 @@ export const metadata: Metadata = {
     title: "JavaScript API | SID",
     description:
       "Complete reference for the SID JavaScript API: window.SID object, methods, TypeScript interfaces, and usage examples.",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "JavaScript API | SID",
+      },
+    ],
     type: "article",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "JavaScript API | SID",
+    description:
+      "Complete reference for the SID JavaScript API: window.SID object, methods, TypeScript interfaces, and usage examples.",
+    images: ["/og.png"],
   },
 };
 

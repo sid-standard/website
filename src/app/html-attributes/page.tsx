@@ -16,7 +16,22 @@ export const metadata: Metadata = {
     title: "HTML Attributes | SID",
     description:
       "Complete reference for SID HTML attributes: data-sid, data-sid-desc, data-sid-action, and more.",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "HTML Attributes | SID",
+      },
+    ],
     type: "article",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "HTML Attributes | SID",
+    description:
+      "Complete reference for SID HTML attributes: data-sid, data-sid-desc, data-sid-action, and more.",
+    images: ["/og.png"],
   },
 };
 

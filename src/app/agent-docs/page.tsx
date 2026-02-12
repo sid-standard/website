@@ -15,7 +15,22 @@ export const metadata: Metadata = {
     title: "Agent Docs | SID",
     description:
       "Specification documents for AI agents implementing or consuming SID.",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "Agent Docs | SID",
+      },
+    ],
     type: "article",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Agent Docs | SID",
+    description:
+      "Specification documents for AI agents implementing or consuming SID.",
+    images: ["/og.png"],
   },
 };
 

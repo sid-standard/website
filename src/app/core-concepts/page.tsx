@@ -15,7 +15,22 @@ export const metadata: Metadata = {
     title: "Core Concepts | SID",
     description:
       "Understand SID's design philosophy: plaintext-first descriptions, minimal structure, and LLM-native design for AI agent accessibility.",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "Core Concepts | SID",
+      },
+    ],
     type: "article",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Core Concepts | SID",
+    description:
+      "Understand SID's design philosophy: plaintext-first descriptions, minimal structure, and LLM-native design for AI agent accessibility.",
+    images: ["/og.png"],
   },
 };
 
