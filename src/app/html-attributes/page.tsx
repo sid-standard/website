@@ -63,8 +63,8 @@ const sidAttributes = [
   {
     attribute: "data-sid-tracking",
     required: false,
-    format: "poll|navigation|external|none",
-    description: "How to track operation completion. Defaults to 'poll' if not specified.",
+    format: "async|navigation|external|none",
+    description: "How to track operation completion. Defaults to 'async' if not specified.",
   },
   {
     attribute: "data-sid-destination",
@@ -77,6 +77,18 @@ const sidAttributes = [
     required: false,
     format: "JSON",
     description: "Human input requirement with reason and JSON Schema. Used when sensitive data collection is needed.",
+  },
+  {
+    attribute: "data-sid-disabled",
+    required: false,
+    format: "true|false",
+    description: "Whether the element is disabled. Defaults to false. Use when an element exists but cannot be interacted with.",
+  },
+  {
+    attribute: "data-sid-disabled-desc",
+    required: false,
+    format: "plaintext",
+    description: "Explanation of why the element is disabled. Only used when data-sid-disabled is true.",
   },
 ];
 
@@ -437,9 +449,9 @@ export default function HTMLAttributesPage() {
               </thead>
               <tbody>
                 <tr>
-                  <td className="px-4 py-2 border-b border-border"><code className="bg-muted px-1 rounded">poll</code></td>
+                  <td className="px-4 py-2 border-b border-border"><code className="bg-muted px-1 rounded">async</code></td>
                   <td className="px-4 py-2 border-b border-border">Async operations (API calls, form submissions)</td>
-                  <td className="px-4 py-2 border-b border-border">Call SID.pollOperation(id)</td>
+                  <td className="px-4 py-2 border-b border-border">interact() waits for SID.complete()</td>
                 </tr>
                 <tr>
                   <td className="px-4 py-2 border-b border-border"><code className="bg-muted px-1 rounded">navigation</code></td>
@@ -462,12 +474,12 @@ export default function HTMLAttributesPage() {
 
           <CodeBlock
             language="html"
-            code={`<!-- Default: poll tracking (can be omitted) -->
+            code={`<!-- Default: async tracking (can be omitted) -->
 <button
   data-sid="btn-save"
   data-sid-desc="Saves the document"
   data-sid-action="click"
-  data-sid-tracking="poll"
+  data-sid-tracking="async"
 >Save</button>
 
 <!-- Navigation tracking -->
@@ -535,6 +547,91 @@ export default function HTMLAttributesPage() {
           <h2 className="text-2xl font-semibold tracking-tight mb-4">
             Advanced Attributes
           </h2>
+
+          {/* data-sid-disabled */}
+          <h3 className="text-xl font-medium mt-8 mb-4">data-sid-disabled</h3>
+
+          <p className="text-base leading-7 mb-4">
+            Indicates that an element exists but cannot be interacted with. This
+            is useful when an element is visible but disabled due to permissions,
+            prerequisites, or other conditions. The disabled state is always
+            returned by both{" "}
+            <code className="bg-muted px-1 rounded">getElements()</code> and{" "}
+            <code className="bg-muted px-1 rounded">getElement(id)</code>.
+          </p>
+
+          <CodeBlock
+            language="html"
+            code={`<!-- Disabled due to permissions -->
+<button
+  data-sid="btn-admin-settings"
+  data-sid-desc="Opens admin settings"
+  data-sid-action="click"
+  data-sid-disabled="true"
+  data-sid-disabled-desc="You need Admin role to access this feature."
+  disabled
+>
+  Admin Settings
+</button>
+
+<!-- Disabled due to prerequisite -->
+<button
+  data-sid="btn-checkout"
+  data-sid-desc="Proceeds to checkout"
+  data-sid-action="click"
+  data-sid-disabled="true"
+  data-sid-disabled-desc="Add at least one item to your cart before checkout."
+  disabled
+>
+  Checkout
+</button>`}
+          />
+
+          {/* data-sid-disabled-desc */}
+          <h3 className="text-xl font-medium mt-8 mb-4">data-sid-disabled-desc</h3>
+
+          <p className="text-base leading-7 mb-4">
+            A plaintext explanation of why the element is disabled. This helps
+            agents understand what conditions need to be met for the element to
+            become enabled, and allows them to inform users appropriately.
+          </p>
+
+          <p className="text-base leading-7 mb-4">
+            Common reasons for disabled elements include:
+          </p>
+
+          <div className="overflow-x-auto mb-4">
+            <table className="w-full border-collapse border border-border rounded-lg">
+              <thead>
+                <tr className="bg-muted">
+                  <th className="px-4 py-2 text-left border-b border-border">Reason</th>
+                  <th className="px-4 py-2 text-left border-b border-border">Example Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="px-4 py-2 border-b border-border">Permission</td>
+                  <td className="px-4 py-2 border-b border-border">&quot;You need Admin role to access this feature&quot;</td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-2 border-b border-border">Prerequisite</td>
+                  <td className="px-4 py-2 border-b border-border">&quot;Save your changes before publishing&quot;</td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-2 border-b border-border">State</td>
+                  <td className="px-4 py-2 border-b border-border">&quot;No items selected. Select at least one item to continue&quot;</td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-2 border-b border-border">Quota</td>
+                  <td className="px-4 py-2 border-b border-border">&quot;You&apos;ve reached the maximum of 5 projects on the free plan&quot;</td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-2">Temporal</td>
+                  <td className="px-4 py-2">&quot;This action is only available during business hours&quot;</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
           {/* data-sid-human-input */}
           <h3 className="text-xl font-medium mt-8 mb-4">data-sid-human-input</h3>
@@ -842,6 +939,64 @@ export default function HTMLAttributesPage() {
 >
   <span>User Menu</span>
 </div>`}
+          />
+
+          {/* Disabled Button - Permission */}
+          <h3 className="text-xl font-medium mt-8 mb-4">Disabled Button (Permission)</h3>
+
+          <CodeBlock
+            language="html"
+            code={`<button
+  data-sid="btn-delete-project"
+  data-sid-desc="Deletes the current project"
+  data-sid-desc-long="Permanently deletes the project and all associated data.
+                      This action cannot be undone. Requires Owner role."
+  data-sid-action="click"
+  data-sid-disabled="true"
+  data-sid-disabled-desc="You need Owner role to delete this project. 
+                          Contact the project owner to request access."
+  disabled
+>
+  Delete Project
+</button>`}
+          />
+
+          {/* Disabled Button - Prerequisite */}
+          <h3 className="text-xl font-medium mt-8 mb-4">Disabled Button (Prerequisite)</h3>
+
+          <CodeBlock
+            language="html"
+            code={`<button
+  data-sid="btn-publish"
+  data-sid-desc="Publishes the document"
+  data-sid-desc-long="Makes the document publicly accessible. Generates a 
+                      shareable link and notifies subscribers."
+  data-sid-action="click"
+  data-sid-disabled="true"
+  data-sid-disabled-desc="Document must be saved before publishing. 
+                          Save your changes first."
+  disabled
+>
+  Publish
+</button>`}
+          />
+
+          {/* Disabled Input - Read-only */}
+          <h3 className="text-xl font-medium mt-8 mb-4">Disabled Input (Read-only)</h3>
+
+          <CodeBlock
+            language="html"
+            code={`<input
+  type="text"
+  data-sid="input-account-id"
+  data-sid-desc="Your account ID"
+  data-sid-action="fill"
+  data-sid-input="text,required"
+  data-sid-disabled="true"
+  data-sid-disabled-desc="Account ID is system-generated and cannot be changed."
+  disabled
+  value="ACC-12345"
+/>`}
           />
         </section>
 

@@ -217,6 +217,19 @@ export default function CoreConceptsPage() {
                     Why human input is needed
                   </td>
                 </tr>
+                <tr className="border-b">
+                  <td className="py-3 px-4">
+                    <code className="bg-muted px-1 rounded text-sm">
+                      Disabled flag
+                    </code>
+                    <span className="text-muted-foreground text-sm ml-2">
+                      (boolean)
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-muted-foreground">
+                    Why the element is disabled
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>

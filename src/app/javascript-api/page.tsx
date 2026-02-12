@@ -211,6 +211,12 @@ if (saveBtn) {
   //  required fields before saving. Shows inline validation 
   //  errors if any fields are invalid. On success, displays 
   //  a toast notification and updates the 'Last saved' timestamp."
+  
+  // Check if element is disabled
+  if (saveBtn.disabled) {
+    console.log('Disabled:', saveBtn.disabledDescription);
+    // "You need Editor role to save documents."
+  }
 }`}
               />
             </div>
@@ -404,6 +410,14 @@ if (success) {
     value?: string;
   };
   
+  // Disabled state - indicates the element exists but cannot be interacted with
+  // Always returned by both getElements() and getElement()
+  disabled: boolean;
+  
+  // Plaintext explanation of why the element is disabled
+  // Only present when disabled is true
+  disabledDescription?: string;
+  
   // Human input requirements (if present, agent must collect data from user)
   humanInput?: HumanInputRequirement;
 }`}
@@ -466,7 +480,7 @@ if (success) {
               name="OperationTracking"
               description="Specifies how an operation's completion should be tracked. Different tracking types have different completion semantics."
               code={`type OperationTracking = 
-  | { type: "poll" }                              // Use SID.getOperation(id) to check status
+  | { type: "async" }                              // interact() waits for SID.complete()
   | { type: "navigation"; destination?: string }  // Page navigation = success
   | { type: "external"; description: string }     // Leaves SID context
   | { type: "none" }                              // No tracking needed (instant actions)`}
@@ -546,7 +560,7 @@ if (!result.success) {
 
 // 4. Handle based on tracking type
 switch (result.operation?.tracking.type) {
-  case 'poll':
+  case 'async':
     // Wait for async operation to complete
     const op = await window.SID.pollOperation(result.operation.id, 15000);
     if (op.status === 'success') {

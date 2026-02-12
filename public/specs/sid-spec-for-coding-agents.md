@@ -29,9 +29,11 @@ SID Version: 1.0.0
 | `data-sid-desc-long` | plaintext | Detailed description including outcomes, errors, and side effects. |
 | `data-sid-input` | `{dataType},{required\|optional}` | Input metadata for fill/select actions. |
 | `data-sid-options` | comma-separated | Available options for select elements. |
-| `data-sid-tracking` | `poll\|navigation\|external\|none` | How to track operation completion. Default: `poll`. |
+| `data-sid-tracking` | `async\|navigation\|external\|none` | How to track operation completion. Default: `async`. |
 | `data-sid-destination` | URL/path | Expected destination for navigation tracking. |
 | `data-sid-human-input` | JSON | Human input requirement with reason and JSON Schema. |
+| `data-sid-disabled` | `true\|false` | Whether the element is disabled. Default: `false`. |
+| `data-sid-disabled-desc` | plaintext | Explanation of why the element is disabled (when disabled). |
 
 ### Input Data Types
 
@@ -64,12 +66,11 @@ window.SID = {
   getElements(): SIDElement[],
   getElement(id: string): SIDElement | null,
   
-  // Execution
-  interact(id: string, action: InteractionAction): Promise<InteractionResult>,
+  // Execution (waits for completion)
+  interact(id: string, action: InteractionAction, options?: { timeout?: number }): Promise<InteractionResult>,
   
-  // Operation tracking
-  getOperation(id: string): Operation | null,
-  pollOperation(id: string, timeoutMs?: number, intervalMs?: number): Promise<Operation>,
+  // Completion signaling (called by app code)
+  complete(elementId: string, result: CompletionResult): void,
   
   // Auth (optional)
   auth?: {
@@ -93,6 +94,8 @@ interface SIDElement {
     enabled: boolean;
     value?: string;
   };
+  disabled: boolean;              // Whether the element is disabled
+  disabledDescription?: string;   // Why the element is disabled (when disabled is true)
   humanInput?: HumanInputRequirement;
 }
 
@@ -114,30 +117,15 @@ interface InteractionAction {
 
 interface InteractionResult {
   success: boolean;
+  status: "completed" | "error" | "timeout" | "navigation" | "external";
   error?: string;
   message?: string;
-  operation?: OperationHandle;
+  effects?: OperationEffects;
 }
 
-interface OperationHandle {
-  id: string;
-  tracking: OperationTracking;
-}
-
-type OperationTracking = 
-  | { type: "poll" }
-  | { type: "navigation"; destination?: string }
-  | { type: "external"; description: string }
-  | { type: "none" }
-
-interface Operation {
-  id: string;
-  elementId: string;
-  actionType: string;
-  status: "pending" | "success" | "error";
+interface CompletionResult {
+  status: "completed" | "error";
   message?: string;
-  startedAt: number;
-  completedAt?: number;
   effects?: OperationEffects;
 }
 
@@ -350,6 +338,58 @@ Include a script tag with SID metadata:
 </button>
 ```
 
+### Disabled Button (Permission)
+
+```html
+<button
+  data-sid="btn-delete-project"
+  data-sid-desc="Deletes the current project"
+  data-sid-desc-long="Permanently deletes the project and all associated data.
+                      This action cannot be undone. Requires Owner role."
+  data-sid-action="click"
+  data-sid-disabled="true"
+  data-sid-disabled-desc="You need Owner role to delete this project. 
+                          Contact the project owner to request access."
+  disabled
+>
+  Delete Project
+</button>
+```
+
+### Disabled Button (Prerequisite)
+
+```html
+<button
+  data-sid="btn-publish"
+  data-sid-desc="Publishes the document"
+  data-sid-desc-long="Makes the document publicly accessible. Generates a 
+                      shareable link and notifies subscribers."
+  data-sid-action="click"
+  data-sid-disabled="true"
+  data-sid-disabled-desc="Document must be saved before publishing. 
+                          Save your changes first."
+  disabled
+>
+  Publish
+</button>
+```
+
+### Disabled Input (Read-only)
+
+```html
+<input
+  type="text"
+  data-sid="input-account-id"
+  data-sid-desc="Your account ID"
+  data-sid-action="fill"
+  data-sid-input="text,required"
+  data-sid-disabled="true"
+  data-sid-disabled-desc="Account ID is system-generated and cannot be changed."
+  disabled
+  value="ACC-12345"
+/>
+```
+
 ### Payment Button with Human Input
 
 ```html
@@ -437,32 +477,49 @@ error, shows retry option and preserves unsaved changes locally.
 
 ## Part 6: Operation Tracking Implementation
 
-### Starting an Operation
+### Signaling Completion with SID.complete()
+
+When an async operation completes, call `SID.complete()` to signal the result:
 
 ```javascript
 // In your app's event handler
 async function handleSave() {
-  const opId = SID.internal.startOperation('btn-save', 'click');
-  
   try {
     await api.saveDocument(data);
-    SID.internal.completeOperation(opId, 'success', 'Document saved', {
-      changes: 'Document content and metadata updated'
+    
+    // Signal success to SID
+    window.SID.complete('btn-save', {
+      status: 'completed',
+      message: 'Document saved',
+      effects: { changes: 'Document content and metadata updated' }
     });
   } catch (error) {
-    SID.internal.completeOperation(opId, 'error', `Save failed: ${error.message}`);
+    // Signal error to SID
+    window.SID.complete('btn-save', {
+      status: 'error',
+      message: `Save failed: ${error.message}`
+    });
   }
 }
 ```
+
+### How It Works
+
+1. Agent calls `SID.interact('btn-save', { type: 'click' }, { timeout: 10000 })`
+2. SID triggers the click event on the button
+3. Your `handleSave()` function runs
+4. When the async work completes, you call `SID.complete()`
+5. The `interact()` Promise resolves with the result
+6. Agent receives the final status without polling
 
 ### Tracking Types
 
 | Type | When to Use | Agent Behavior |
 |------|-------------|----------------|
-| `poll` | Async operations (API calls, form submissions) | Call `SID.pollOperation(id)` |
-| `navigation` | Full page navigation | Wait for page load |
-| `external` | OAuth, payment gateways, external sites | Read description for guidance |
-| `none` | Instant actions (hover, focus) | No tracking needed |
+| `async` | Async operations (API calls, form submissions) | `interact()` waits for `complete()` |
+| `navigation` | Full page navigation | `interact()` returns immediately with `navigation` status |
+| `external` | OAuth, payment gateways, external sites | `interact()` returns immediately with `external` status |
+| `none` | Instant actions (hover, focus) | `interact()` returns immediately with `completed` status |
 
 ---
 
@@ -493,7 +550,8 @@ Fields marked with `"x-sid-sensitive": true` should be masked in UI and not logg
 6. [ ] Add long descriptions for complex elements
 7. [ ] Implement operation tracking for async actions
 8. [ ] Add human input requirements for sensitive data collection
-9. [ ] Test with an AI agent to verify discoverability
+9. [ ] Mark disabled elements with `data-sid-disabled` and `data-sid-disabled-desc`
+10. [ ] Test with an AI agent to verify discoverability
 
 ---
 

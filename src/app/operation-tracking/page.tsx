@@ -5,30 +5,21 @@ import { CodeBlock } from "@/components/content/code-block";
 
 /**
  * SEO metadata for the Operation Tracking page.
- * Requirements: 10.1, 10.2, 10.3, 10.4
  */
 export const metadata: Metadata = {
   title: "Operation Tracking | SID - Semantic Interaction Description",
   description:
-    "Learn how SID tracks operation completion with four tracking types: poll, navigation, external, and none. Includes polling API documentation and complete interaction flow examples.",
+    "Learn how SID tracks operation completion. The interact() method now waits for completion automatically - no polling required.",
   openGraph: {
     title: "Operation Tracking | SID",
     description:
-      "How to signal interaction completion to agents using SID's operation tracking system.",
+      "How to signal interaction completion to agents using SID's simplified operation tracking system.",
     type: "article",
   },
 };
 
 /**
  * Operation Tracking page - explains how to track interaction completion.
- *
- * This page covers:
- * - The four tracking types (poll, navigation, external, none)
- * - When to use each tracking type
- * - The polling API (getOperation, pollOperation)
- * - Complete interaction flow examples
- *
- * Requirements: 10.1, 10.2, 10.3, 10.4
  */
 export default function OperationTrackingPage() {
   return (
@@ -40,14 +31,47 @@ export default function OperationTrackingPage() {
         </h1>
         <p className="mt-4 text-lg text-muted-foreground">
           One of the key challenges for agents is knowing when an interaction
-          has completed and whether it succeeded. Visual indicators like
-          loaders, toasts, and spinners are designed for humans, not agents. SID
-          provides explicit operation tracking to solve this.
+          has completed and whether it succeeded. SID solves this with a
+          simplified approach: the <code>interact()</code> method waits for
+          completion automatically and returns the final result.
         </p>
       </header>
 
       {/* Main Content */}
       <div className="space-y-12">
+        {/* Section: Simplified API */}
+        <section>
+          <h2 className="text-2xl font-semibold tracking-tight mb-4">
+            Simplified API - No Polling Required
+          </h2>
+
+          <p className="text-base leading-7 mb-4">
+            The <code className="bg-muted px-1 rounded">interact()</code> method
+            now handles waiting internally. When you trigger an interaction, it
+            returns a Promise that resolves when the operation completes (or
+            times out).
+          </p>
+
+          <CodeBlock
+            language="javascript"
+            code={`// Simple! No polling needed
+const result = await SID.interact('btn-save', { type: 'click' }, { timeout: 10000 });
+
+if (result.status === 'completed') {
+  console.log('Success:', result.message);
+  
+  // Check what changed
+  if (result.effects?.elementsAdded) {
+    console.log('New elements:', result.effects.elementsAdded);
+  }
+} else if (result.status === 'error') {
+  console.error('Failed:', result.message);
+} else if (result.status === 'timeout') {
+  console.log('Operation timed out');
+}`}
+          />
+        </section>
+
         {/* Section: The Four Tracking Types */}
         <section>
           <h2 className="text-2xl font-semibold tracking-tight mb-4">
@@ -56,7 +80,9 @@ export default function OperationTrackingPage() {
 
           <p className="text-base leading-7 mb-6">
             Different interactions have different completion semantics. SID
-            defines four tracking types to handle these variations:
+            defines four tracking types, but agents don&apos;t need to handle them
+            differently - the <code>interact()</code> method returns the
+            appropriate status automatically.
           </p>
 
           {/* Tracking Types Table */}
@@ -71,27 +97,22 @@ export default function OperationTrackingPage() {
                     When Used
                   </th>
                   <th className="border border-border px-4 py-2 text-left font-semibold">
-                    How Agent Determines Completion
+                    Result Status
                   </th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td className="border border-border px-4 py-2">
-                    <code className="bg-muted px-1 rounded">poll</code>
+                    <code className="bg-muted px-1 rounded">async</code>
                   </td>
                   <td className="border border-border px-4 py-2">
                     Async operations (API calls, form submissions)
                   </td>
                   <td className="border border-border px-4 py-2">
-                    Call{" "}
-                    <code className="bg-muted px-1 rounded">
-                      SID.pollOperation(id)
-                    </code>{" "}
-                    or poll{" "}
-                    <code className="bg-muted px-1 rounded">
-                      SID.getOperation(id)
-                    </code>
+                    <code className="bg-muted px-1 rounded">completed</code>,{" "}
+                    <code className="bg-muted px-1 rounded">error</code>, or{" "}
+                    <code className="bg-muted px-1 rounded">timeout</code>
                   </td>
                 </tr>
                 <tr>
@@ -99,10 +120,11 @@ export default function OperationTrackingPage() {
                     <code className="bg-muted px-1 rounded">navigation</code>
                   </td>
                   <td className="border border-border px-4 py-2">
-                    Full page navigation (server-side or hard navigation)
+                    Full page navigation
                   </td>
                   <td className="border border-border px-4 py-2">
-                    Page load completes; success = new page loaded
+                    <code className="bg-muted px-1 rounded">navigation</code>{" "}
+                    (returns immediately)
                   </td>
                 </tr>
                 <tr>
@@ -110,12 +132,11 @@ export default function OperationTrackingPage() {
                     <code className="bg-muted px-1 rounded">external</code>
                   </td>
                   <td className="border border-border px-4 py-2">
-                    Leaves SID context (OAuth, external site, payment gateway)
+                    OAuth, payment gateways
                   </td>
                   <td className="border border-border px-4 py-2">
-                    Described in{" "}
-                    <code className="bg-muted px-1 rounded">description</code>{" "}
-                    field; often return URL based
+                    <code className="bg-muted px-1 rounded">external</code>{" "}
+                    (returns immediately)
                   </td>
                 </tr>
                 <tr>
@@ -126,7 +147,8 @@ export default function OperationTrackingPage() {
                     Instant actions (hover, focus)
                   </td>
                   <td className="border border-border px-4 py-2">
-                    No tracking needed; always succeeds if triggered
+                    <code className="bg-muted px-1 rounded">completed</code>{" "}
+                    (returns immediately)
                   </td>
                 </tr>
               </tbody>
@@ -134,332 +156,113 @@ export default function OperationTrackingPage() {
           </div>
         </section>
 
-        {/* Section: Poll Tracking */}
+        {/* Section: Handling Different Statuses */}
         <section>
           <h2 className="text-2xl font-semibold tracking-tight mb-4">
-            Poll Tracking
+            Handling Different Statuses
           </h2>
 
           <p className="text-base leading-7 mb-4">
-            The <code className="bg-muted px-1 rounded">poll</code> tracking
-            type is used for asynchronous operations like API calls, form
-            submissions, and any action that takes time to complete. The agent
-            uses the polling API to check the operation status.
+            The result&apos;s <code className="bg-muted px-1 rounded">status</code>{" "}
+            field tells you what happened:
           </p>
 
           <CodeBlock
             language="javascript"
-            code={`// Trigger an async operation
-const result = await SID.interact('btn-save', { type: 'click' });
+            code={`const result = await SID.interact('btn-save', { type: 'click' }, { timeout: 15000 });
 
-if (result.operation?.tracking.type === 'poll') {
-  // Wait for the operation to complete
-  const op = await SID.pollOperation(result.operation.id, 15000);
-  
-  if (op.status === 'success') {
-    console.log('Operation succeeded:', op.message);
+switch (result.status) {
+  case 'completed':
+    // Operation finished successfully
+    console.log('Success:', result.message);
+    if (result.effects?.elementsAdded) {
+      console.log('New elements:', result.effects.elementsAdded);
+    }
+    break;
     
-    // Check what changed
-    if (op.effects?.elementsAdded) {
-      console.log('New elements available:', op.effects.elementsAdded);
-    }
-  } else if (op.status === 'error') {
-    console.error('Operation failed:', op.message);
-  }
-}`}
-          />
-        </section>
-
-        {/* Section: The Navigation Problem */}
-        <section>
-          <h2 className="text-2xl font-semibold tracking-tight mb-4">
-            The Navigation Problem
-          </h2>
-
-          <p className="text-base leading-7 mb-4">
-            When a full page navigation occurs (not client-side routing), the
-            JavaScript context is destroyed. The operation cannot be tracked
-            because the SID instance no longer exists. The spec handles this by:
-          </p>
-
-          <ol className="list-decimal list-inside space-y-2 text-base leading-7 ml-4 mb-6">
-            <li>
-              <strong>Declaring intent upfront:</strong> The{" "}
-              <code className="bg-muted px-1 rounded">InteractionResult</code>{" "}
-              tells the agent that navigation will occur
-            </li>
-            <li>
-              <strong>Success = page load:</strong> If the browser successfully
-              loads a new page, the operation succeeded
-            </li>
-            <li>
-              <strong>Failure stays on page:</strong> If the operation fails,
-              the user typically stays on the current page with an error, which
-              the agent can detect via{" "}
-              <code className="bg-muted px-1 rounded">SID.getOperation(id)</code>
-            </li>
-          </ol>
-
-          <CodeBlock
-            language="javascript"
-            code={`// Example: Link that navigates to another page
-const result = await SID.interact('link-dashboard', { type: 'click' });
-
-if (result.operation?.tracking.type === 'navigation') {
-  // Agent knows: don't poll, just wait for page load
-  // If page loads successfully, operation succeeded
-  // The destination hint helps agent know what to expect
-  console.log('Expected destination:', result.operation.tracking.destination);
-  // "/dashboard"
-}`}
-          />
-
-          <p className="text-base leading-7 mt-4">
-            The{" "}
-            <code className="bg-muted px-1 rounded">
-              tracking.destination
-            </code>{" "}
-            field provides a hint about where the navigation will go, helping
-            the agent verify it arrived at the expected page.
-          </p>
-        </section>
-
-        {/* Section: External Context */}
-        <section>
-          <h2 className="text-2xl font-semibold tracking-tight mb-4">
-            External Context (OAuth, Payment Gateways)
-          </h2>
-
-          <p className="text-base leading-7 mb-4">
-            Some interactions take the user completely outside the
-            application—to OAuth providers, payment gateways, or external sites.
-            These may or may not return to a SID-enabled page.
-          </p>
-
-          <CodeBlock
-            language="javascript"
-            code={`// Example: OAuth login button
-const result = await SID.interact('btn-google-login', { type: 'click' });
-
-if (result.operation?.tracking.type === 'external') {
-  // Agent reads the description to understand what happens
-  console.log(result.operation.tracking.description);
-  // "Redirects to Google OAuth. On success, returns to /auth/callback 
-  //  which redirects to dashboard. On cancel, returns to /login with 
-  //  error=cancelled parameter."
-}`}
-          />
-
-          <p className="text-base leading-7 mt-4">
-            The{" "}
-            <code className="bg-muted px-1 rounded">
-              tracking.description
-            </code>{" "}
-            field is crucial here—it tells the agent in plaintext what to expect
-            and how to detect success or failure. This might include:
-          </p>
-
-          <ul className="list-disc list-inside space-y-2 text-base leading-7 ml-4 mt-4">
-            <li>Where the user will be redirected</li>
-            <li>What URL parameters indicate success or failure</li>
-            <li>What page the user returns to after completion</li>
-            <li>Any timeout considerations</li>
-          </ul>
-        </section>
-
-        {/* Section: Untracked Actions */}
-        <section>
-          <h2 className="text-2xl font-semibold tracking-tight mb-4">
-            Untracked Actions (Hover, Focus)
-          </h2>
-
-          <p className="text-base leading-7 mb-4">
-            Some actions are instant and always succeed if triggered. These
-            don&apos;t need operation tracking:
-          </p>
-
-          <CodeBlock
-            language="javascript"
-            code={`// Hover to reveal tooltip or dropdown
-const result = await SID.interact('menu-trigger', { type: 'hover' });
-
-// tracking.type === 'none' means no operation to track
-// The action either worked (success: true) or didn't (success: false)
-// No async completion to wait for
-
-if (result.success) {
-  // The hover was triggered, any UI changes are immediate
-  // Re-query elements to see what's now available
-  const elements = SID.getElements();
-}`}
-          />
-
-          <p className="text-base leading-7 mt-4">
-            For untracked actions, the{" "}
-            <code className="bg-muted px-1 rounded">result.success</code> field
-            tells you immediately whether the action was triggered. There&apos;s
-            no need to poll or wait.
-          </p>
-        </section>
-
-        {/* Section: The Polling API */}
-        <section>
-          <h2 className="text-2xl font-semibold tracking-tight mb-4">
-            The Polling API
-          </h2>
-
-          <p className="text-base leading-7 mb-4">
-            SID provides two methods for tracking operations:
-          </p>
-
-          {/* getOperation */}
-          <div className="border rounded-lg p-4 mb-6">
-            <h3 className="font-mono font-semibold mb-2">
-              getOperation(id: string): Operation | null
-            </h3>
-            <p className="text-muted-foreground text-sm mb-4">
-              Returns the current status of an operation. Use this for manual
-              polling or one-time status checks.
-            </p>
-            <CodeBlock
-              language="javascript"
-              code={`const operation = SID.getOperation('op-123');
-
-if (operation) {
-  console.log('Status:', operation.status);  // 'pending' | 'success' | 'error'
-  console.log('Message:', operation.message);
-  console.log('Started at:', operation.startedAt);
-  
-  if (operation.status !== 'pending') {
-    console.log('Completed at:', operation.completedAt);
-  }
-}`}
-            />
-          </div>
-
-          {/* pollOperation */}
-          <div className="border rounded-lg p-4 mb-6">
-            <h3 className="font-mono font-semibold mb-2">
-              pollOperation(id: string, timeoutMs?: number, intervalMs?:
-              number): Promise&lt;Operation&gt;
-            </h3>
-            <p className="text-muted-foreground text-sm mb-4">
-              Polls an operation until it completes or times out. Returns the
-              final operation state.
-            </p>
-            <CodeBlock
-              language="javascript"
-              code={`// Using pollOperation (recommended for browser automation)
-const operation = await SID.pollOperation(operationId, 10000, 500);
-// Polls every 500ms, times out after 10s
-
-// Manual polling (if more control needed)
-const startTime = Date.now();
-while (Date.now() - startTime < 10000) {
-  const op = SID.getOperation(operationId);
-  if (op.status !== 'pending') break;
-  await new Promise(r => setTimeout(r, 500));
-}`}
-            />
-          </div>
-
-          {/* Why Polling vs Await */}
-          <h3 className="text-xl font-medium mt-8 mb-4">
-            Why Polling Instead of Await?
-          </h3>
-
-          <p className="text-base leading-7 mb-4">
-            The API uses{" "}
-            <code className="bg-muted px-1 rounded">pollOperation</code> instead
-            of <code className="bg-muted px-1 rounded">awaitOperation</code>{" "}
-            because:
-          </p>
-
-          <ol className="list-decimal list-inside space-y-2 text-base leading-7 ml-4">
-            <li>
-              <strong>Playwright/Puppeteer compatibility:</strong> Top-level
-              await in{" "}
-              <code className="bg-muted px-1 rounded">evaluate()</code> can be
-              problematic. Polling with explicit intervals works reliably across
-              browser automation tools.
-            </li>
-            <li>
-              <strong>Timeout control:</strong> Agent controls both total
-              timeout and poll interval.
-            </li>
-            <li>
-              <strong>Interruptibility:</strong> Agent can stop polling if
-              needed (e.g., user cancels).
-            </li>
-          </ol>
-        </section>
-
-        {/* Section: Complete Interaction Flow */}
-        <section>
-          <h2 className="text-2xl font-semibold tracking-tight mb-4">
-            Complete Interaction Flow
-          </h2>
-
-          <p className="text-base leading-7 mb-4">
-            Here&apos;s a complete example showing how an agent handles all
-            tracking types:
-          </p>
-
-          <CodeBlock
-            language="javascript"
-            code={`// 1. Get element with full description
-const saveBtn = SID.getElement('btn-save');
-console.log(saveBtn.descriptionLong);
-// "Saves the current document to the server. Shows inline validation 
-//  errors if any fields are invalid. On success, shows a toast and 
-//  updates the 'Last saved' timestamp. On network error, shows retry option."
-
-// 2. Check if action is tracked
-const clickAction = saveBtn.actions.find(a => a.type === 'click');
-if (clickAction.tracked) {
-  // This action produces an operation we can track
-}
-
-// 3. Trigger interaction
-const result = await SID.interact('btn-save', { type: 'click' });
-
-if (!result.success) {
-  // Interaction couldn't be triggered (element disabled, not found, etc.)
-  console.error(result.error);
-  return;
-}
-
-// 4. Handle based on tracking type
-switch (result.operation?.tracking.type) {
-  case 'poll':
-    // Wait for async operation to complete
-    const op = await SID.pollOperation(result.operation.id, 15000);
-    if (op.status === 'success') {
-      console.log('Saved:', op.message);
-      // Check what changed
-      if (op.effects?.elementsAdded) {
-        console.log('New elements:', op.effects.elementsAdded);
-      }
-    } else {
-      console.error('Save failed:', op.message);
-    }
+  case 'error':
+    // Operation failed
+    console.error('Failed:', result.error || result.message);
+    break;
+    
+  case 'timeout':
+    // Operation didn't complete within timeout
+    console.log('Timed out - operation may still complete');
     break;
     
   case 'navigation':
-    // Page will navigate; success = new page loads
-    // Agent should wait for page load, then re-query SID on new page
+    // Page will navigate - wait for page load
+    console.log('Navigating to:', result.message);
+    // In Playwright: await page.waitForNavigation();
     break;
     
   case 'external':
-    // Leaving SID context; read description for guidance
-    console.log(result.operation.tracking.description);
-    break;
-    
-  case 'none':
-    // Instant action, already complete
+    // Leaving SID context (OAuth, payment, etc.)
+    console.log('External operation:', result.message);
     break;
 }`}
           />
+        </section>
+
+        {/* Section: For App Developers */}
+        <section>
+          <h2 className="text-2xl font-semibold tracking-tight mb-4">
+            For App Developers: Signaling Completion
+          </h2>
+
+          <p className="text-base leading-7 mb-4">
+            When an async operation completes, call{" "}
+            <code className="bg-muted px-1 rounded">SID.complete()</code> to
+            signal the result. This resolves the Promise that the agent is
+            waiting on.
+          </p>
+
+          <CodeBlock
+            language="javascript"
+            code={`// In your app's click handler
+async function handleSave() {
+  try {
+    await api.saveDocument(data);
+    
+    // Signal success to SID
+    SID.complete('btn-save', {
+      status: 'completed',
+      message: 'Document saved',
+      effects: { changes: 'Content updated' }
+    });
+  } catch (error) {
+    // Signal error to SID
+    SID.complete('btn-save', {
+      status: 'error',
+      message: error.message
+    });
+  }
+}`}
+          />
+
+          <h3 className="text-xl font-medium mt-8 mb-4">
+            How It Works
+          </h3>
+
+          <ol className="list-decimal list-inside space-y-2 text-base leading-7 ml-4">
+            <li>
+              Agent calls{" "}
+              <code className="bg-muted px-1 rounded">
+                SID.interact(&apos;btn-save&apos;, &#123; type: &apos;click&apos; &#125;)
+              </code>
+            </li>
+            <li>SID triggers the click event on the button</li>
+            <li>Your click handler runs and starts async work</li>
+            <li>
+              When done, you call{" "}
+              <code className="bg-muted px-1 rounded">SID.complete()</code>
+            </li>
+            <li>
+              The <code className="bg-muted px-1 rounded">interact()</code>{" "}
+              Promise resolves with the result
+            </li>
+            <li>Agent receives the final status - no polling needed!</li>
+          </ol>
         </section>
 
         {/* Section: Operation Effects */}
@@ -498,25 +301,19 @@ switch (result.operation?.tracking.type) {
 
           <CodeBlock
             language="javascript"
-            code={`const op = await SID.pollOperation(result.operation.id);
+            code={`const result = await SID.interact('btn-add-item', { type: 'click' });
 
-if (op.status === 'success') {
+if (result.status === 'completed') {
   // Check if a modal opened
-  if (op.effects?.elementsAdded?.includes('modal-confirm')) {
+  if (result.effects?.elementsAdded?.includes('modal-add-item')) {
     // New modal is available, interact with it
-    const modal = SID.getElement('modal-confirm');
+    const modal = SID.getElement('modal-add-item');
     console.log(modal.descriptionLong);
   }
   
-  // Check if we navigated
-  if (op.effects?.navigatedTo) {
-    console.log('Now on page:', op.effects.navigatedTo);
-  }
-  
   // Check what data changed
-  if (op.effects?.changes) {
-    console.log('Changes:', op.effects.changes);
-    // "Document saved. Last modified timestamp updated."
+  if (result.effects?.changes) {
+    console.log('Changes:', result.effects.changes);
   }
 }`}
           />
@@ -529,90 +326,46 @@ if (op.status === 'success') {
           </h2>
 
           <p className="text-base leading-7 mb-4">
-            If an operation stays{" "}
-            <code className="bg-muted px-1 rounded">pending</code> beyond the
-            agent&apos;s timeout:
+            If an operation doesn&apos;t complete within the specified timeout, the
+            result will have <code className="bg-muted px-1 rounded">status: &apos;timeout&apos;</code>.
+            The operation may still complete in the background.
           </p>
-
-          <ol className="list-decimal list-inside space-y-2 text-base leading-7 ml-4 mb-6">
-            <li>
-              <strong>Agent decides:</strong> The agent can retry, report
-              failure, or ask for user intervention
-            </li>
-            <li>
-              <strong>No auto-resolution:</strong> SID doesn&apos;t
-              automatically mark operations as failed
-            </li>
-            <li>
-              <strong>Stale operations:</strong> Apps should clean up operations
-              older than a reasonable threshold (e.g., 5 minutes)
-            </li>
-          </ol>
 
           <CodeBlock
             language="javascript"
-            code={`try {
-  const op = await SID.pollOperation(result.operation.id, 10000);
-  // Operation completed within timeout
-} catch (error) {
-  // Timeout exceeded - operation still pending
-  // Agent can:
+            code={`const result = await SID.interact('btn-slow-operation', { type: 'click' }, { timeout: 5000 });
+
+if (result.status === 'timeout') {
+  // Operation didn't complete within 5 seconds
+  // Options:
   // 1. Retry the operation
-  // 2. Report to user that the action is taking longer than expected
-  // 3. Check operation status one more time
-  const finalStatus = SID.getOperation(result.operation.id);
-  if (finalStatus?.status === 'pending') {
-    console.log('Operation still in progress after timeout');
-  }
+  // 2. Report to user that action is taking longer than expected
+  // 3. Continue with other tasks
+  console.log('Operation timed out:', result.message);
 }`}
           />
         </section>
 
-        {/* Section: Implementation Notes */}
+        {/* Section: HTML Attributes */}
         <section>
           <h2 className="text-2xl font-semibold tracking-tight mb-4">
-            Implementation Notes for App Developers
+            HTML Attributes for Tracking
           </h2>
 
           <p className="text-base leading-7 mb-4">
-            The SID library needs hooks for app code to signal operation
-            completion:
-          </p>
-
-          <CodeBlock
-            language="javascript"
-            code={`// In app's save handler
-async function handleSave() {
-  const opId = SID.internal.startOperation('btn-save', 'click');
-  
-  try {
-    await api.saveDocument(data);
-    SID.internal.completeOperation(opId, 'success', 'Document saved', {
-      changes: 'Document content and metadata updated'
-    });
-  } catch (error) {
-    SID.internal.completeOperation(opId, 'error', \`Save failed: \${error.message}\`);
-  }
-}
-
-// For navigation, declare it upfront in the element definition
-// The library handles the rest`}
-          />
-
-          <p className="text-base leading-7 mt-4">
             The{" "}
             <code className="bg-muted px-1 rounded">data-sid-tracking</code>{" "}
-            attribute on HTML elements declares the tracking type:
+            attribute declares the tracking type:
           </p>
 
           <CodeBlock
             language="html"
-            code={`<!-- Async operation (default) -->
+            code={`<!-- Async operation (default) - waits for SID.complete() -->
 <button data-sid="btn-save" data-sid-action="click">
   Save
 </button>
 
-<!-- Navigation -->
+<!-- Navigation - returns immediately with 'navigation' status -->
 <a href="/dashboard" 
    data-sid="link-dashboard" 
    data-sid-action="click"
@@ -621,14 +374,14 @@ async function handleSave() {
   Go to Dashboard
 </a>
 
-<!-- External -->
+<!-- External - returns immediately with 'external' status -->
 <button data-sid="btn-oauth" 
         data-sid-action="click"
         data-sid-tracking="external">
   Sign in with Google
 </button>
 
-<!-- Instant (no tracking) -->
+<!-- Instant (no tracking) - returns immediately with 'completed' status -->
 <div data-sid="menu-trigger" 
      data-sid-action="hover"
      data-sid-tracking="none">

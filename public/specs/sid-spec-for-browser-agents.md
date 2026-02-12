@@ -81,6 +81,8 @@ interface SIDElement {
     enabled: boolean;
     value?: string;
   };
+  disabled: boolean;       // Whether the element is disabled
+  disabledDescription?: string; // Why the element is disabled (when disabled is true)
   humanInput?: HumanInputRequirement;
 }
 ```
@@ -107,11 +109,12 @@ interface ActionDefinition {
 ### Basic Interaction
 
 ```javascript
+// Interact and wait for completion - no polling needed!
 const result = await page.evaluate(async (id, action) => {
-  return await window.SID.interact(id, action);
+  return await window.SID.interact(id, action, { timeout: 10000 });
 }, 'btn-save', { type: 'click' });
 
-// result: { success: true, operation: { id: "op-123", tracking: { type: "poll" } } }
+// result: { success: true, status: 'completed', message: 'Document saved' }
 ```
 
 ### Interaction Types
@@ -130,12 +133,51 @@ const result = await page.evaluate(async (id, action) => {
 ```typescript
 interface InteractionResult {
   success: boolean;        // Whether interaction was triggered
+  status: 'completed' | 'error' | 'timeout' | 'navigation' | 'external';
   error?: string;          // Error if interaction failed
   message?: string;        // Description of what happened
-  operation?: {
-    id: string;
-    tracking: OperationTracking;
+  effects?: {              // What changed (for 'completed' status)
+    navigatedTo?: string;
+    elementsAdded?: string[];
+    elementsRemoved?: string[];
+    changes?: string;
   };
+}
+```
+
+### Handling Different Status Values
+
+```javascript
+const result = await page.evaluate(async () => {
+  return await window.SID.interact('btn-save', { type: 'click' }, { timeout: 15000 });
+});
+
+switch (result.status) {
+  case 'completed':
+    console.log('Success:', result.message);
+    if (result.effects?.elementsAdded) {
+      console.log('New elements:', result.effects.elementsAdded);
+    }
+    break;
+    
+  case 'error':
+    console.error('Failed:', result.error || result.message);
+    break;
+    
+  case 'timeout':
+    console.log('Operation timed out - may still complete');
+    break;
+    
+  case 'navigation':
+    // Page will navigate; wait for page load
+    console.log('Navigating to:', result.message);
+    await page.waitForNavigation();
+    break;
+    
+  case 'external':
+    // Leaving SID context (OAuth, payment, etc.)
+    console.log('External operation:', result.message);
+    break;
 }
 ```
 
@@ -147,44 +189,24 @@ interface InteractionResult {
 
 | Type | When Used | How to Handle |
 |------|-----------|---------------|
-| `poll` | Async operations (API calls, form submissions) | Use `pollOperation()` |
-| `navigation` | Full page navigation | Wait for page load |
-| `external` | OAuth, payment gateways | Read description for guidance |
-| `none` | Instant actions (hover, focus) | No tracking needed |
+| `async` | Async operations (API calls, form submissions) | `interact()` waits automatically |
+| `navigation` | Full page navigation | Wait for page load after `interact()` |
+| `external` | OAuth, payment gateways | Read `result.message` for guidance |
+| `none` | Instant actions (hover, focus) | Returns immediately with `completed` |
 
-### Polling for Completion
+### Simplified Flow (No Polling Required)
+
+The `interact()` method handles waiting internally:
 
 ```javascript
-// Using pollOperation (recommended)
-const operation = await page.evaluate(async (opId) => {
-  return await window.SID.pollOperation(opId, 10000, 500);
-  // Polls every 500ms, times out after 10s
-}, result.operation.id);
+// interact waits for completion:
+const result = await page.evaluate(async () => {
+  return await window.SID.interact('btn-save', { type: 'click' }, { timeout: 10000 });
+});
 
-if (operation.status === 'success') {
-  console.log('Operation completed:', operation.message);
-  // Check effects
-  if (operation.effects?.elementsAdded) {
-    console.log('New elements available:', operation.effects.elementsAdded);
-  }
-} else if (operation.status === 'error') {
-  console.error('Operation failed:', operation.message);
+if (result.status === 'completed') {
+  console.log('Done:', result.message);
 }
-```
-
-### Manual Polling
-
-```javascript
-// If you need more control
-const operation = await page.evaluate(async (opId) => {
-  const startTime = Date.now();
-  while (Date.now() - startTime < 10000) {
-    const op = window.SID.getOperation(opId);
-    if (op.status !== 'pending') return op;
-    await new Promise(r => setTimeout(r, 500));
-  }
-  return window.SID.getOperation(opId);
-}, result.operation.id);
 ```
 
 ### Handling Navigation
@@ -194,8 +216,9 @@ const result = await page.evaluate(async () => {
   return await window.SID.interact('link-dashboard', { type: 'click' });
 });
 
-if (result.operation?.tracking.type === 'navigation') {
-  // Don't poll - wait for page load instead
+if (result.status === 'navigation') {
+  // Don't wait for completion - page will navigate
+  console.log('Expected destination:', result.message);
   await page.waitForNavigation();
   
   // Check if new page supports SID
@@ -212,32 +235,31 @@ const result = await page.evaluate(async () => {
   return await window.SID.interact('btn-google-login', { type: 'click' });
 });
 
-if (result.operation?.tracking.type === 'external') {
-  // Read the description for guidance
-  const description = result.operation.tracking.description;
+if (result.status === 'external') {
+  // Read the message for guidance
+  console.log(result.message);
   // "Redirects to Google OAuth. On success, returns to /auth/callback..."
   
-  // Handle OAuth flow based on description
+  // Handle OAuth flow based on message
 }
 ```
 
-### Operation Interface
+### Timeout Behavior
 
-```typescript
-interface Operation {
-  id: string;
-  elementId: string;
-  actionType: string;
-  status: "pending" | "success" | "error";
-  message?: string;
-  startedAt: number;
-  completedAt?: number;
-  effects?: {
-    navigatedTo?: string;
-    elementsAdded?: string[];
-    elementsRemoved?: string[];
-    changes?: string;
-  };
+```javascript
+const result = await page.evaluate(async () => {
+  return await window.SID.interact('btn-slow-operation', { type: 'click' }, { timeout: 5000 });
+});
+
+if (result.status === 'timeout') {
+  // Operation didn't complete within timeout
+  // It may still complete in the background
+  console.log('Operation timed out:', result.message);
+  
+  // Options:
+  // 1. Retry the operation
+  // 2. Report to user that action is taking longer than expected
+  // 3. Continue with other tasks
 }
 ```
 
@@ -333,40 +355,44 @@ async function interactWithSIDPage(page) {
   );
   console.log('Save button details:', saveBtn.descriptionLong);
   
-  // 5. Check if action is tracked
-  const clickAction = saveBtn.actions.find(a => a.type === 'click');
+  // 5. Check if element is disabled
+  if (saveBtn.disabled) {
+    return { error: saveBtn.disabledDescription };
+  }
   
-  // 6. Trigger interaction
+  // 6. Trigger interaction and wait for completion
   const result = await page.evaluate(async () => 
-    await window.SID.interact('btn-save', { type: 'click' })
+    await window.SID.interact('btn-save', { type: 'click' }, { timeout: 15000 })
   );
   
   if (!result.success) {
     return { error: result.error };
   }
   
-  // 7. Handle based on tracking type
-  switch (result.operation?.tracking.type) {
-    case 'poll':
-      const op = await page.evaluate(async (opId) => 
-        await window.SID.pollOperation(opId, 15000), 
-        result.operation.id
-      );
-      return { status: op.status, message: op.message };
+  // 7. Handle based on status
+  switch (result.status) {
+    case 'completed':
+      return { 
+        status: 'success', 
+        message: result.message,
+        effects: result.effects
+      };
+      
+    case 'error':
+      return { status: 'error', message: result.message };
+      
+    case 'timeout':
+      return { status: 'timeout', message: 'Operation timed out' };
       
     case 'navigation':
       await page.waitForNavigation();
-      return { status: 'navigated' };
+      return { status: 'navigated', destination: result.message };
       
     case 'external':
-      return { 
-        status: 'external', 
-        description: result.operation.tracking.description 
-      };
+      return { status: 'external', description: result.message };
       
-    case 'none':
     default:
-      return { status: 'completed' };
+      return { status: 'unknown' };
   }
 }
 ```
@@ -380,45 +406,106 @@ async function fillForm(page, formData) {
   // Get all form elements
   const elements = await page.evaluate(() => window.SID.getElements());
   
-  // Fill each field
+  // Fill each field (these are typically instant, no waiting needed)
   for (const [fieldId, value] of Object.entries(formData)) {
     const element = elements.find(e => e.id === fieldId);
     if (!element) continue;
     
     const action = element.actions[0];
     
-    await page.evaluate(async (id, actionType, val) => {
-      await window.SID.interact(id, { type: actionType, value: val });
+    const result = await page.evaluate(async (id, actionType, val) => {
+      return await window.SID.interact(id, { type: actionType, value: val });
     }, fieldId, action.type, value);
+    
+    if (!result.success) {
+      console.error(`Failed to fill ${fieldId}:`, result.error);
+    }
   }
   
-  // Submit form
+  // Submit form and wait for completion
   const result = await page.evaluate(async () => 
-    await window.SID.interact('btn-submit', { type: 'click' })
+    await window.SID.interact('btn-submit', { type: 'click' }, { timeout: 10000 })
   );
-  
-  // Wait for completion
-  if (result.operation?.tracking.type === 'poll') {
-    return await page.evaluate(async (opId) => 
-      await window.SID.pollOperation(opId, 10000),
-      result.operation.id
-    );
-  }
   
   return result;
 }
 
 // Usage
-await fillForm(page, {
+const result = await fillForm(page, {
   'input-email': 'user@example.com',
   'input-name': 'John Doe',
   'select-plan': 'pro'
 });
+
+if (result.status === 'completed') {
+  console.log('Form submitted successfully');
+}
 ```
 
 ---
 
-## Part 8: Error Handling
+## Part 8: Handling Disabled Elements
+
+Elements may be disabled even though they exist in the DOM. SID provides explicit disabled state information so agents can understand why an element cannot be interacted with.
+
+### Checking Disabled State
+
+```javascript
+const element = await page.evaluate((id) => 
+  window.SID.getElement(id), 'btn-delete'
+);
+
+if (element.disabled) {
+  // Element exists but cannot be interacted with
+  console.log('Disabled:', element.disabledDescription);
+  // "You need Owner role to delete this project."
+  
+  // Agent can inform user or take alternative action
+}
+```
+
+### Filtering Disabled Elements
+
+```javascript
+// Get all elements and filter to only enabled ones
+const elements = await page.evaluate(() => window.SID.getElements());
+const enabledElements = elements.filter(el => !el.disabled);
+
+// Or find disabled elements to explain limitations
+const disabledElements = elements.filter(el => el.disabled);
+for (const el of disabledElements) {
+  console.log(`${el.id} is disabled: ${el.disabledDescription}`);
+}
+```
+
+### Common Disabled Reasons
+
+| Reason | Example Description |
+|--------|---------------------|
+| Permission | "You need Admin role to access this feature" |
+| Prerequisite | "Save your changes before publishing" |
+| State | "No items selected. Select at least one item to continue" |
+| Quota | "You've reached the maximum of 5 projects on the free plan" |
+| Temporal | "This action is only available during business hours" |
+
+### Interaction with Disabled Elements
+
+Attempting to interact with a disabled element will fail:
+
+```javascript
+const result = await page.evaluate(async () => 
+  await window.SID.interact('btn-disabled', { type: 'click' })
+);
+
+// result.success will be false
+// result.error will explain why (e.g., "Element is disabled")
+```
+
+Always check `disabled` before attempting interaction to provide better user feedback.
+
+---
+
+## Part 9: Error Handling
 
 ### Interaction Errors
 
@@ -431,39 +518,35 @@ if (!result.success) {
   // Element might be disabled, not found, or not visible
   console.error('Interaction failed:', result.error);
 }
-```
 
-### Operation Errors
-
-```javascript
-const operation = await page.evaluate(async (opId) => 
-  await window.SID.pollOperation(opId, 10000),
-  operationId
-);
-
-if (operation.status === 'error') {
-  // Server-side error, validation failure, etc.
-  console.error('Operation failed:', operation.message);
+if (result.status === 'error') {
+  // Operation was triggered but failed (e.g., server error)
+  console.error('Operation failed:', result.message);
 }
 ```
 
 ### Timeout Handling
 
 ```javascript
-try {
-  const operation = await page.evaluate(async (opId) => 
-    await window.SID.pollOperation(opId, 5000), // 5 second timeout
-    operationId
-  );
-} catch (e) {
-  // Operation timed out - still pending
-  // Decide: retry, report failure, or ask user
+const result = await page.evaluate(async () => 
+  await window.SID.interact('btn-slow', { type: 'click' }, { timeout: 5000 })
+);
+
+if (result.status === 'timeout') {
+  // Operation didn't complete within timeout
+  // It may still complete in the background
+  console.log('Operation timed out');
+  
+  // Options:
+  // 1. Retry the operation
+  // 2. Report to user that action is taking longer than expected
+  // 3. Continue with other tasks
 }
 ```
 
 ---
 
-## Part 9: Authentication
+## Part 10: Authentication
 
 ### Check Auth Support
 
@@ -493,7 +576,7 @@ if (authenticated) {
 
 ---
 
-## Part 10: MCP Server Integration (Future)
+## Part 11: MCP Server Integration
 
 SID is designed to work with Model Context Protocol (MCP) servers that provide browser access. A future MCP server could expose SID operations as tools:
 
@@ -516,24 +599,13 @@ tools: [
         value: { type: "string" }
       }
     }
-  },
-  {
-    name: "sid_poll_operation",
-    description: "Wait for an operation to complete",
-    inputSchema: {
-      type: "object",
-      properties: {
-        operationId: { type: "string" },
-        timeoutMs: { type: "number" }
-      }
-    }
   }
 ]
 ```
 
 ---
 
-## Part 11: Best Practices
+## Part 12: Best Practices
 
 ### Discovery
 
@@ -545,16 +617,16 @@ tools: [
 ### Interaction
 
 1. Verify element is visible and enabled before interacting
-2. Use appropriate action type for each element
-3. Handle all tracking types appropriately
-4. Always check `result.success` before proceeding
+2. Check `disabled` property and inform user of `disabledDescription` if disabled
+3. Use appropriate action type for each element
+4. Handle all tracking types appropriately
+5. Always check `result.success` before proceeding
 
 ### Operation Tracking
 
-1. Use `pollOperation()` for async operations
-2. Set reasonable timeouts (10-30 seconds typical)
-3. Handle timeout gracefully - operation may still complete
-4. Check `effects` for state changes after completion
+1. Set reasonable timeouts (10-30 seconds typical)
+2. Handle timeout gracefully - operation may still complete
+3. Check `effects` for state changes after completion
 
 ### Human Input
 
@@ -582,16 +654,31 @@ window.SID.getElements()
 window.SID.getElement('element-id')
 ```
 
-### Interact
+### Check Disabled State
 ```javascript
-await window.SID.interact('element-id', { type: 'click' })
-await window.SID.interact('input-id', { type: 'fill', value: 'text' })
-await window.SID.interact('select-id', { type: 'select', value: 'option' })
+const el = window.SID.getElement('element-id');
+if (el.disabled) console.log(el.disabledDescription);
 ```
 
-### Poll Operation
+### Interact and Wait for Completion
 ```javascript
-await window.SID.pollOperation('operation-id', 10000, 500)
+// Click and wait
+const result = await window.SID.interact('element-id', { type: 'click' }, { timeout: 10000 });
+
+// Fill input
+await window.SID.interact('input-id', { type: 'fill', value: 'text' });
+
+// Select option
+await window.SID.interact('select-id', { type: 'select', value: 'option' });
+
+// Check result
+if (result.status === 'completed') {
+  console.log('Success:', result.message);
+} else if (result.status === 'error') {
+  console.error('Failed:', result.error);
+} else if (result.status === 'timeout') {
+  console.log('Timed out');
+}
 ```
 
 ### Authenticate
