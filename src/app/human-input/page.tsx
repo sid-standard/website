@@ -3,6 +3,7 @@ import { DocLayout } from "@/components/layout/doc-layout";
 import { PageNavigation } from "@/components/layout/page-navigation";
 import { CodeBlock } from "@/components/content/code-block";
 import { TypeDefinition } from "@/components/content/type-definition";
+import Link from "next/link";
 
 /**
  * SEO metadata for the Human Input page.
@@ -755,8 +756,10 @@ if (element.humanInput) {
               AI agents
             </li>
             <li>
-              <strong>SDKs</strong> — Libraries for implementing SID in your
-              application
+              <Link href="/agent-docs" className="font-semibold hover:underline">
+                Agent Docs
+              </Link>{" "}
+              — Specification documents for AI agents
             </li>
           </ul>
         </section>

@@ -62,6 +62,11 @@ export const navigationItems: NavItem[] = [
     href: "/agent-docs",
     description: "Specification documents for AI agents",
   },
+  {
+    title: "SDKs",
+    href: "/sdks",
+    description: "Official libraries for implementing SID",
+  },
 ];
 
 /**

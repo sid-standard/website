@@ -176,38 +176,43 @@ export default function AgentDocsPage() {
           </div>
         </section>
 
-        {/* Section: SDKs Coming Soon */}
+        {/* Section: SDKs */}
         <section>
-          <h2 className="text-2xl font-semibold tracking-tight mb-4">
-            SDKs (Coming Soon)
-          </h2>
+          <h2 className="text-2xl font-semibold tracking-tight mb-4">SDKs</h2>
 
           <p className="text-base leading-7 mb-4">
-            We&apos;re developing official SDKs to make SID implementation
-            easier. These will provide type-safe APIs and framework
-            integrations:
+            We provide official SDKs to make SID implementation easier. These
+            provide type-safe APIs and framework integrations:
           </p>
 
           <div className="grid gap-4 sm:grid-cols-2 mt-4">
-            <div className="rounded-lg border border-dashed border-border p-4">
-              <h3 className="font-medium mb-1 mt-0">@sid-standard/core</h3>
-              <p className="text-sm text-muted-foreground">
+            <div className="rounded-lg border border-border p-4">
+              <h3 className="font-medium mb-1 mt-0">@sid-standard/runtime</h3>
+              <p className="text-sm text-muted-foreground mb-3">
                 Lightweight JavaScript library for any web application
               </p>
-              <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                <span className="h-1.5 w-1.5 rounded-full bg-yellow-500"></span>
-                In Development
-              </div>
+              <Link
+                href="https://github.com/sid-standard/sdk/tree/main/sid-runtime"
+                target="_blank"
+                className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+              >
+                <ExternalLink className="h-4 w-4" />
+                View on GitHub
+              </Link>
             </div>
-            <div className="rounded-lg border border-dashed border-border p-4">
+            <div className="rounded-lg border border-border p-4">
               <h3 className="font-medium mb-1 mt-0">@sid-standard/react</h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground mb-3">
                 React hooks and components for SID integration
               </p>
-              <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                <span className="h-1.5 w-1.5 rounded-full bg-yellow-500"></span>
-                In Development
-              </div>
+              <Link
+                href="https://github.com/sid-standard/sdk/tree/main/sid-react"
+                target="_blank"
+                className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+              >
+                <ExternalLink className="h-4 w-4" />
+                View on GitHub
+              </Link>
             </div>
           </div>
         </section>

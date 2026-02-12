@@ -143,7 +143,7 @@ export default function IntroductionPage() {
                 <code className="bg-muted px-1 rounded">window.SID</code> to
                 discover and interact with elements.
               </p>
-              <pre className="bg-muted p-3 rounded text-sm overflow-x-auto">
+              <pre className="bg-muted p-3 rounded text-sm overflow-x-auto mb-4">
                 <code>{`// Discover all interactive elements
 const elements = window.SID.getElements();
 
@@ -151,7 +151,21 @@ const elements = window.SID.getElements();
 const saveBtn = window.SID.getElement('btn-save');
 
 // Trigger an interaction
-await window.SID.interact('btn-save', { type: 'click' });`}</code>
+const result = await window.SID.interact('btn-save', { type: 'click' });`}</code>
+              </pre>
+
+              <p className="text-muted-foreground text-sm mb-3">
+                The result tells the agent exactly what happened:
+              </p>
+              <pre className="bg-muted p-3 rounded text-sm overflow-x-auto">
+                <code>{`if (result.status === 'completed') {
+  console.log('Success:', result.message);
+  
+  // Check what changed (e.g., new elements, data changes)
+  if (result.effects?.changes) {
+    console.log('Changes:', result.effects.changes);
+  }
+}`}</code>
               </pre>
             </div>
           </div>
